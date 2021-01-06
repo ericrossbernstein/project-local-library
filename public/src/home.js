@@ -13,6 +13,8 @@ function booksBorrowedCount(books) {
   }, 0);
 }
 
+// HELPER FUNCTION:
+
 function sortAndTrimArray(array) {
   const result = array.sort((objectA, objectB) => objectA.count < objectB.count ? 1 : -1);
   return result.slice(0,5);
