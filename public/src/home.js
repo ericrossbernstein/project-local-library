@@ -1,3 +1,5 @@
+const { findAuthorById } = require("./books.js");
+
 function totalBooksCount(books) {
   return books.length;
 }
@@ -7,54 +9,77 @@ function totalAccountsCount(accounts) {
 }
 
 function booksBorrowedCount(books) {
-  return books.reduce((sum, book) => {
-    if (!book.borrows[0].returned) sum++;
-    return sum;
-  }, 0);
+  return books.filter((book) => !book.borrows[0].returned).length;
 }
 
-// HELPER FUNCTION:
+// A very generic helper function to count a specific key
+// across a list of books. The "whatToCount" function takes
+// a book argument and should return a number.
+function countSomething(books, key, whatToCount) {
+  return books.reduce((counts, book) => {
+    if (!counts.hasOwnProperty(book[key])) {
+      counts[book[key]] = 0;
+    }
+    counts[book[key]] += whatToCount(book);
+    return counts;
+  }, {});
+}
 
-function sortAndTrimArray(array) {
-  const result = array.sort((objectA, objectB) => objectA.count < objectB.count ? 1 : -1);
-  return result.slice(0,5);
+// Transforms { "Key": 1 } to [{ "name": "Key", "count": 1 }]
+// Limits to the top five highest counts by default.
+function getFormattedCountList(counts, limit = 5) {
+  const keysWithHighestCounts = Object.keys(counts)
+    .sort((keyA, keyB) => (counts[keyA] < counts[keyB] ? 1 : -1))
+    .slice(0, limit);
+
+  return keysWithHighestCounts.map((name) => ({
+    name,
+    count: counts[name],
+  }));
 }
 
 function getMostCommonGenres(books) {
-  const result = books.reduce((sumArr, book) => {
-    if (sumArr.some((genreObject) => genreObject.name === book.genre)) {
-      const selected = sumArr.find((genreObject) => genreObject.name === book.genre);
-      selected.count++;
-    } else {
-      const name = book.genre;
-      const count = 1;
-      sumArr.push({name, count});
-    }
-    return sumArr;
-  }, []);
-  return sortAndTrimArray(result);
+  // First, count number of books per each genre
+  const numberOfBooksPerGenre = countSomething(
+    books,
+    "genre",
+    // This part's kind of weird. Since we just want to increment by one for each book, we have
+    // an empty function that always returns 1.
+    () => 1
+  );
+  return getFormattedCountList(numberOfBooksPerGenre);
 }
 
 function getMostPopularBooks(books) {
-  const result = books.map((book) => {
-    const name = book.title;
-    const count = book.borrows.length;
-    return {name, count};
-  });
-  return sortAndTrimArray(result);
+  const numberOfBorrowsPerBook = countSomething(
+    books,
+    "title",
+    (book) => book.borrows.length
+  );
+  return getFormattedCountList(numberOfBorrowsPerBook);
+}
+
+function fullAuthorName(author) {
+  const {
+    name: { first, last },
+  } = author;
+  return `${first} ${last}`;
 }
 
 function getMostPopularAuthors(books, authors) {
-  const result = authors.map((author) => {
-    const { name: { first, last } } = author;
-    const name = `${first} ${last}`;
-    const count = books.reduce((sum, book) => {
-      if (book.authorId === author.id) sum += book.borrows.length;
-      return sum;
-    }, 0);
-    return {name, count};
-  });
-  return sortAndTrimArray(result);
+  // First, sum the borrows per author across all books
+  const borrowsPerAuthor = countSomething(
+    books,
+    "authorId",
+    (book) => book.borrows.length
+  );
+
+  return getFormattedCountList(borrowsPerAuthor).map((item) => ({
+    ...item,
+    // Overwrite the name from the author id to the full author name.
+    // Order matters here - it must be after the spread operator.
+    name: fullAuthorName(findAuthorById(authors, item.name)),
+  }));
 }
 
 module.exports = {

@@ -1,5 +1,5 @@
 function findAuthorById(authors, id) {
-  return authors.find((author) => author.id === id);
+  return authors.find((author) => author.id == id);
 }
 
 function findBookById(books, id) {
@@ -13,9 +13,13 @@ function partitionBooksByBorrowedStatus(books) {
 }
 
 function getBorrowersForBook(book, accounts) {
-  const result = book.borrows.slice(0,10).map((borrower) => {
-    const matchingAccount = accounts.find((account) => account.id === borrower.id);
-    return {...borrower, ...matchingAccount};
+  // Only return first 10 borrowers per book
+  const firstTenBorrowers = book.borrows.slice(0, 10);
+  const result = firstTenBorrowers.map((borrower) => {
+    const matchingAccount = accounts.find(
+      (account) => account.id === borrower.id
+    );
+    return { ...borrower, ...matchingAccount };
   });
   return result;
 }
